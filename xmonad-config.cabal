@@ -1,0 +1,15 @@
+
+name:                xmonad-config
+version:             0.1.0.0
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable xmonad-x86_64-linux
+  main-is:             xmonad.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:       base
+                     , xmonad
+                     , xmonad-contrib
+                     , data-default
+  default-language:    Haskell2010
+
