@@ -37,12 +37,14 @@ Config { font = "xft:Rounded Mgen+ 1m black:style=regular"
                                                 , "-O" , "Charging <left>%"
                                                 , "-i" , "<left>%"
                                           ] 50
+                    , Run Com "xmobar-volume" [] "volume" 10
+                    , Run Com "dropbox" ["status"] "dropbox" 50
                     , Run Date "%a %m/%d %H:%M" "date" 10
                     , Run StdinReader
                     ]
        , sepChar = "%"
        , alignSep = "}{"
-       , template = " %StdinReader% }{≫%wlan0%  ≫%cpu%  ≫%memory%  ≫%battery%  <fc=#c7a273>%date%</fc> "
+       , template = " %StdinReader% }{≫%wlan0%  ≫%cpu%  ≫%memory%  ≫Dropbox: %dropbox%  ≫%volume%  ≫%battery%  <fc=#c7a273>%date%</fc> "
        }
 
 
