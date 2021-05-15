@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+# stack install --local-bin-path ./ && xmonad --restart
+cabal install \
+  --installdir=./ \
+  --jobs=4 \
+  --overwrite-policy=always \
+  --install-method=copy \
+  --write-ghc-environment-files=always
+cabal exec -- xmonad --restart

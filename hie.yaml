@@ -1,0 +1,7 @@
+cradle:
+  cabal:
+    - path: "./xmonad.hs"
+      component: "xmonad-config:exe:xmonad-x86_64-linux"
+
+    - path: "./xmobar.hs"
+      component: "xmonad-config:exe:xmobar-x86_64-linux"
