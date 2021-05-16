@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE TypeOperators     #-}
@@ -83,6 +84,8 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       , ("M-S-C-q"      , io exitSuccess)
       , ("M-x"          , spawn "sudo pm-suspend")
       , ("M-S-x"        , spawn "systemctl suspend")
+      , ("M-<Space>"    , toggleTwoPane)
+      , ("M-S-<Space>"  , setLayoutType LayoutFull)
       , ("M-<Return>"   , focusNextScreen)
       , ("M-C-<Return>" , shiftNextScreen)
       , ("M-s"          , swapScreen)
@@ -119,31 +122,6 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       `removeKeysP`
       [ "S-C-n" ]
 
-      --`additionalKeysP`
-      --[ ("M-<Right>", sendMessage $ Move R)
-      --, ("M-<Left>" , sendMessage $ Move L)
-      --, ("M-<Up>"   , sendMessage $ Move U)
-      --, ("M-<Down>" , sendMessage $ Move D)
-      --]
-      --`additionalKeys`
-      --[ ((mod4Mask, xK_Right), sendMessage $ Move R)
-      --, ((mod4Mask, xK_Left ), sendMessage $ Move L)
-      --, ((mod4Mask, xK_Up   ), sendMessage $ Move U)
-      --, ((mod4Mask, xK_Down ), sendMessage $ Move D)
-      --]
-      --`additionalKeys`
-      --[ ((mod4Mask .|. controlMask, xK_Right), sendMessage $ Swap R)
-      --, ((mod4Mask .|. controlMask, xK_Left ), sendMessage $ Swap L)
-      --, ((mod4Mask .|. controlMask, xK_Up   ), sendMessage $ Swap U)
-      --, ((mod4Mask .|. controlMask, xK_Down ), sendMessage $ Swap D)
-      --]
-      --`additionalKeys`
-      --[ ((mod4Mask .|. controlMask .|. shiftMask, xK_Right), sendMessage $ Go R)
-      --, ((mod4Mask .|. controlMask .|. shiftMask, xK_Left ), sendMessage $ Go L)
-      --, ((mod4Mask .|. controlMask .|. shiftMask, xK_Up   ), sendMessage $ Go U)
-      --, ((mod4Mask .|. controlMask .|. shiftMask, xK_Down ), sendMessage $ Go D)
-      --]
-
     screenShotName :: String
     screenShotName = "$HOME/Dropbox/ScreenShots/Screenshot%Y-%m-%d-%H-%M-%S.png"
 
@@ -169,10 +147,10 @@ xmobar' conf = do
         }
   where
     hPPOutput h = hPutBuilder h . (<>"\n") . fromString
-    ppLayout s
-      | "combining" `List.isPrefixOf` s = "TwoPane"
-      | "Tabbed" `List.isPrefixOf` s    = "Tabbed"
-      | otherwise                       = s
+    ppLayout s = case parseLayoutType s of
+      LayoutFull -> "Full"
+      LayoutTabbed -> "Tabbed"
+      LayoutTwoPaneTabbed -> "TwoPane"
 
 -------------------------------------------------------------------------------
 -- Layout
@@ -184,15 +162,21 @@ infixr 6 :$
 infixr 5 :||
 type SimpleTab = Decoration TabbedDecoration DefaultShrinker :$ Simplest
 
-type MyLayoutHook = Full
-                :|| SimpleTab
+type MyLayoutHook = SimpleTab
                 :|| CombineTwoP (TwoPane ()) SimpleTab SimpleTab
+                :|| Full
+
+data LayoutType
+  = LayoutFull
+  | LayoutTabbed
+  | LayoutTwoPaneTabbed
+  deriving (Eq,Ord,Show)
 
 myLayoutHook :: MyLayoutHook Window
-myLayoutHook = Full
-           ||| myTabbed
+myLayoutHook = myTabbed
            ||| combineTwoP (TwoPane (1/50) (1/2))
                   myTabbed myTabbed (Const True)
+           ||| Full
   where
     myTabbed = tabbed shrinkText def
         { activeColor         = "#1a1e1b"
@@ -261,32 +245,54 @@ toggleTouchPad = setTouchPad . not =<< isTouchPadEnabled
   -- gsettings list-keys $touchpad
   -- gsettings range $touchpad some-key
 
+toggleTwoPane :: X ()
+toggleTwoPane = getCurrentLayoutType >>= \case
+  LayoutFull -> setLayoutType LayoutTabbed
+  LayoutTabbed -> setLayoutType LayoutTwoPaneTabbed
+  LayoutTwoPaneTabbed -> setLayoutType LayoutTabbed
+
 focusUp :: X ()
-focusUp = currentLayoutIsCombP >>= \case
-  True -> focusUpInPane
-  False -> windows W.focusUp
+focusUp = getCurrentLayoutType >>= \case
+  LayoutTwoPaneTabbed -> focusUpInPane
+  _ -> windows W.focusUp
 
 focusDown :: X ()
-focusDown = currentLayoutIsCombP >>= \case
-  True -> focusDownInPane
-  False -> windows W.focusDown
+focusDown = getCurrentLayoutType >>= \case
+  LayoutTwoPaneTabbed -> focusDownInPane
+  _ -> windows W.focusDown
 
 focusUpOrAnotherPane :: X ()
-focusUpOrAnotherPane = currentLayoutIsCombP >>= \case
-  True -> focusAnotherPane
-  False -> windows W.focusUp
+focusUpOrAnotherPane = getCurrentLayoutType >>= \case
+  LayoutTwoPaneTabbed -> focusAnotherPane
+  _ -> windows W.focusUp
 
 focusDownOrAnotherPane :: X ()
-focusDownOrAnotherPane = currentLayoutIsCombP >>= \case
-  True -> focusAnotherPane
-  False -> windows W.focusDown
+focusDownOrAnotherPane = getCurrentLayoutType >>= \case
+  LayoutTwoPaneTabbed -> focusAnotherPane
+  _ -> windows W.focusDown
 
 -------------------------------------------------------------------------------
 -- Utils
 -------------------------------------------------------------------------------
 
+getCurrentLayoutType :: X LayoutType
+getCurrentLayoutType = parseLayoutType <$> getCurrentLayoutName
+
 getCurrentLayoutName :: X String
 getCurrentLayoutName = dynamicLogString def { ppOrder = \ ~[_,l,_] -> [l] }
+
+parseLayoutType :: String -> LayoutType
+parseLayoutType s
+     | "combining" `List.isPrefixOf` s =  LayoutTwoPaneTabbed
+     | "Tabbed" `List.isPrefixOf` s    =  LayoutTabbed
+     | otherwise                       =  LayoutFull
+
+setLayoutType :: LayoutType -> X ()
+setLayoutType t = do
+  t' <- getCurrentLayoutType
+  unless (t == t' ) $ do
+    sendMessage NextLayout
+    setLayoutType t
 
 withNextScreen :: (WorkspaceId -> WindowSet -> WindowSet) -> X ()
 withNextScreen func = gets (W.visible . windowset) >>= \case
@@ -304,8 +310,8 @@ focusAnotherPane = getPanesInfo >>= \case
         Just v ->  focus v
     Nothing -> pure ()
 
-focusDownInPane :: X ()
-focusDownInPane = getPanesInfo >>= \case
+focusUpInPane :: X ()
+focusUpInPane = getPanesInfo >>= \case
     Just (_all', focusedPane, _unfocusedPane) -> do
       getFocusedWin >>= \case
         Just focused -> do
@@ -314,8 +320,8 @@ focusDownInPane = getPanesInfo >>= \case
         Nothing -> pure ()
     Nothing -> pure ()
 
-focusUpInPane :: X ()
-focusUpInPane = getPanesInfo >>= \case
+focusDownInPane :: X ()
+focusDownInPane = getPanesInfo >>= \case
     Just (_all', focusedPane, _unfocusedPane) -> do
       getFocusedWin >>= \case
         Just focused -> do
@@ -345,9 +351,4 @@ getPanesInfo = getFocusedWin >>= \case
 getFocusedWin :: X (Maybe Window)
 getFocusedWin = gets $
   windowset >>> W.current >>> W.workspace >>> W.stack >>> fmap W.focus
-
-currentLayoutIsCombP :: X Bool
-currentLayoutIsCombP = do
-  layout <- getCurrentLayoutName
-  pure $ "combining" `List.isPrefixOf` layout
 
