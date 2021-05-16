@@ -48,10 +48,6 @@ import           XMonad.Util.Run                ( safeSpawn
                                                 , spawnPipe
                                                 , runProcessWithInput
                                                 )
-
-
-import           Graphics.X11.Xinerama          as X
-import           Graphics.X11.Xlib.Display      as X
 {- }}} -}
 main :: IO ()
 main = xmonad =<< xmobar' (ewmh myConfig)
@@ -69,19 +65,13 @@ main = xmonad =<< xmobar' (ewmh myConfig)
                                          , "unity-settings-daemon"
                                          , "compton -CG --active-opacity 1.0 --shadow-ignore-shaped"
                                          , "feh --bg-scale $HOME/Dropbox/WallPapers/Reflexion.jpg"
-                                         -- , "feh --bg-scale $HOME/Dropbox/WallPapers/PrincessPrincipalOST-screen.jpg"
                                          , "xmodmap $HOME/.Xmodmap"
                                          ]
       , handleExtraArgs    = \xs conf -> do
-          rs <- X.getScreenInfo =<< X.openDisplay ""
           mborder <- tryAnyDeep $ read <$> readFile "/tmp/xmonad_borderwidth"
           let borderWidth = case mborder of
                 Right x -> x
-                Left _
-                  | atHome    -> 20
-                  | otherwise -> 10
-              atHome = rs == [ Rectangle 0 0   1280 720
-                             , Rectangle 0 720 1920 1080 ]
+                Left _  -> 10
               conf'  = conf {  borderWidth }
           handleExtraArgs def xs conf'
       }
@@ -99,11 +89,11 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       , ("M-a"          , sendMessage SwapWindow)
       , ("M-S-a"        , hoge) -- なんか動作の確認に
       -- , ("M-S-d"        , killXmobar)
-      , ("M-S-r"        , recompile False >> restart "xmonad" True)
-      , ("M-k"          , windowsFocusUpOrAnotherPane)
-      , ("M-j"          , windowsFocusDownOrAnotherPane)
-      , ("M-S-k"        , windowsFocusUp)
-      , ("M-S-j"        , windowsFocusDown)
+      , ("M-S-r"        , restart "xmonad" True)
+      , ("M-k"          , focusUpOrAnotherPane)
+      , ("M-j"          , focusDownOrAnotherPane)
+      , ("M-S-k"        , focusUp)
+      , ("M-S-j"        , focusDown)
       -- , ("M-S-k"        , spawn "amixer -D pulse sset Master 2%+")
       -- , ("M-S-j"        , spawn "amixer -D pulse sset Master 2%-")
       -- , ("M-S-o"        , spawn "amixer -D pulse sset Master mute")
@@ -255,23 +245,23 @@ toggleTouchPad = setTouchPad . not =<< isTouchPadEnabled
   -- gsettings list-keys $touchpad
   -- gsettings range $touchpad some-key
 
-windowsFocusUp :: X ()
-windowsFocusUp = currentLayoutIsCombP >>= \case
+focusUp :: X ()
+focusUp = currentLayoutIsCombP >>= \case
   True -> focusUpInPane
   False -> windows W.focusUp
 
-windowsFocusDown :: X ()
-windowsFocusDown = currentLayoutIsCombP >>= \case
+focusDown :: X ()
+focusDown = currentLayoutIsCombP >>= \case
   True -> focusDownInPane
   False -> windows W.focusDown
 
-windowsFocusUpOrAnotherPane :: X ()
-windowsFocusUpOrAnotherPane = currentLayoutIsCombP >>= \case
+focusUpOrAnotherPane :: X ()
+focusUpOrAnotherPane = currentLayoutIsCombP >>= \case
   True -> focusAnotherPane
   False -> windows W.focusUp
 
-windowsFocusDownOrAnotherPane :: X ()
-windowsFocusDownOrAnotherPane = currentLayoutIsCombP >>= \case
+focusDownOrAnotherPane :: X ()
+focusDownOrAnotherPane = currentLayoutIsCombP >>= \case
   True -> focusAnotherPane
   False -> windows W.focusDown
 
