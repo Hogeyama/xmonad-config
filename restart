@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+cd $(dirname $0)
 # stack install --local-bin-path ./ && xmonad --restart
 cabal install \
   --installdir=./ \
