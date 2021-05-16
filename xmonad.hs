@@ -155,19 +155,24 @@ main = xmonad =<< xmobar' (ewmh myConfig)
 -- xmobar
 -------------------------------------------------------------------------------
 
--- xmobarにLayout名を表示しない
 xmobar' :: LayoutClass l Window
         => XConfig l -> IO (XConfig (ModifiedLayout AvoidStruts l))
 xmobar' conf = do
-    h <- spawnPipe "$HOME/.xmonad/xmobar"
+    h <- spawnPipe "$HOME/.xmonad/xmobar-x86_64-linux"
     pure $ docks $ conf
         { layoutHook = avoidStruts (layoutHook conf)
         , logHook = logHook conf
                  <> dynamicLogWithPP xmobarPP
-                      { ppOutput = hPutBuilder h . (<>"\n") . fromString
-                      , ppLayout = const ""
+                      { ppOutput = hPPOutput h
+                      , ppLayout = ppLayout
                       }
         }
+  where
+    hPPOutput h = hPutBuilder h . (<>"\n") . fromString
+    ppLayout s
+      | "combining" `List.isPrefixOf` s = "TwoPane"
+      | "Tabbed" `List.isPrefixOf` s    = "Tabbed"
+      | otherwise                       = s
 
 -------------------------------------------------------------------------------
 -- Layout
@@ -180,13 +185,13 @@ infixr 5 :||
 type SimpleTab = Decoration TabbedDecoration DefaultShrinker :$ Simplest
 
 type MyLayoutHook = Full
-                -- :|| SimpleTab
+                :|| SimpleTab
                 :|| CombineTwoP (TwoPane ()) SimpleTab SimpleTab
                 -- :|| Tall
 
 myLayoutHook :: MyLayoutHook Window
 myLayoutHook = Full
-           --  ||| simpleTabbed
+           ||| simpleTabbed
            ||| combineTwoP (TwoPane (1/50) (1/2))
                   simpleTabbed simpleTabbed (Const True)
            --  ||| Tall 1 (3/100) (1/2)
