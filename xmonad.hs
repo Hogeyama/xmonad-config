@@ -57,7 +57,7 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       , terminal           = "gnome-terminal"
       , workspaces         = myWorkspaces
       -- , focusedBorderColor = "#00bfff"
-      , focusedBorderColor = "#000000"
+      , focusedBorderColor = "#00FF00"
       , normalBorderColor  = "#eeeeee"
       , manageHook         = manageDocks <+> manageHook def
       , layoutHook         = myLayoutHook
@@ -71,7 +71,7 @@ main = xmonad =<< xmobar' (ewmh myConfig)
           mborder <- tryAnyDeep $ read <$> readFile "/tmp/xmonad_borderwidth"
           let borderWidth = case mborder of
                 Right x -> x
-                Left _  -> 10
+                Left _  -> 2
               conf'  = conf {  borderWidth }
           handleExtraArgs def xs conf'
       }
@@ -96,8 +96,8 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       , ("M-S-j"        , focusDown)
       -- , ("M-S-k"        , spawn "amixer -D pulse sset Master 2%+")
       -- , ("M-S-j"        , spawn "amixer -D pulse sset Master 2%-")
-      -- , ("M-S-o"        , spawn "amixer -D pulse sset Master mute")
-      -- , ("M-S-t"        , spawn "amixer -D pulse sset Master toggle")
+      , ("M-S-o"        , spawn "amixer -D pulse sset Master mute")
+      , ("M-S-t"        , spawn "amixer -D pulse sset Master toggle")
       , ("M-S-s"        , spawn $ unwords ["scrot ", screenShotName])
       , ("M-m"          , toggleTouchPad)
       , ("M-b"          , sendMessage ToggleStruts) -- xmobar
@@ -187,14 +187,25 @@ type SimpleTab = Decoration TabbedDecoration DefaultShrinker :$ Simplest
 type MyLayoutHook = Full
                 :|| SimpleTab
                 :|| CombineTwoP (TwoPane ()) SimpleTab SimpleTab
-                -- :|| Tall
 
 myLayoutHook :: MyLayoutHook Window
 myLayoutHook = Full
-           ||| simpleTabbed
+           ||| myTabbed
            ||| combineTwoP (TwoPane (1/50) (1/2))
-                  simpleTabbed simpleTabbed (Const True)
-           --  ||| Tall 1 (3/100) (1/2)
+                  myTabbed myTabbed (Const True)
+  where
+    myTabbed = tabbed shrinkText def
+        { activeColor         = "#1a1e1b"
+        , activeTextColor     = "#00FF00"
+        , activeBorderColor   = "#000000"
+        , inactiveColor       = "#1a1e1b"
+        , inactiveTextColor   = "#676767"
+        , inactiveBorderColor = "#000000"
+        , activeBorderWidth   = 1
+        , inactiveBorderWidth = 1
+        , fontName            = "xft:Rounded Mgen+ 1mn:size=8"
+        , decoHeight          = 30
+        }
 
 hoge :: X ()
 hoge = do
