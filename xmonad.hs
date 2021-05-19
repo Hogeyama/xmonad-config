@@ -57,9 +57,8 @@ main = xmonad =<< xmobar' (ewmh myConfig)
       { modMask            = mod4Mask
       , terminal           = "gnome-terminal"
       , workspaces         = myWorkspaces
-      -- , focusedBorderColor = "#00bfff"
       , focusedBorderColor = "#00FF00"
-      , normalBorderColor  = "#eeeeee"
+      , normalBorderColor  = "#EEEEEE"
       , manageHook         = manageDocks <+> manageHook def
       , layoutHook         = myLayoutHook
       , startupHook        = mapM_ spawn [ "dropbox start"
@@ -70,11 +69,11 @@ main = xmonad =<< xmobar' (ewmh myConfig)
                                          ]
       , handleExtraArgs    = \xs conf -> do
           mborder <- tryAnyDeep $ read <$> readFile "/tmp/xmonad_borderwidth"
-          let borderWidth = case mborder of
+          handleExtraArgs def xs conf
+            { borderWidth = case mborder of
                 Right x -> x
                 Left _  -> 2
-              conf'  = conf {  borderWidth }
-          handleExtraArgs def xs conf'
+            }
       }
 
       `additionalKeysP`
@@ -179,10 +178,10 @@ myLayoutHook = myTabbed
            ||| Full
   where
     myTabbed = tabbed shrinkText def
-        { activeColor         = "#1a1e1b"
+        { activeColor         = "#1A1E1B"
         , activeTextColor     = "#00FF00"
         , activeBorderColor   = "#000000"
-        , inactiveColor       = "#1a1e1b"
+        , inactiveColor       = "#1A1E1B"
         , inactiveTextColor   = "#676767"
         , inactiveBorderColor = "#000000"
         , activeBorderWidth   = 1
