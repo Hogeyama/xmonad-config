@@ -8,48 +8,51 @@
 {-# OPTIONS_GHC -Wall          #-}
 module Main where
 {- {{{ -}
-import           RIO                            hiding (Const)
-import qualified RIO.List                       as List
-import qualified Data.List.Split                as List
+import qualified Data.List.Split               as List
+import           RIO                     hiding ( Const )
+import qualified RIO.List                      as List
 
 import           XMonad
-import           XMonad.Hooks.EwmhDesktops      ( ewmh )
 import           XMonad.Hooks.DynamicLog        ( PP(..)
+                                                , dynamicLogString
+                                                , dynamicLogWithPP
                                                 , xmobarPP
                                                 -- , xmobar
-                                                , dynamicLogWithPP, dynamicLogString
                                                 )
+import           XMonad.Hooks.EwmhDesktops      ( ewmh )
 import           XMonad.Hooks.ManageDocks       ( AvoidStruts
-                                                , manageDocks
-                                                , docks
-                                                , avoidStruts
                                                 , ToggleStruts(..)
+                                                , avoidStruts
+                                                , docks
+                                                , manageDocks
                                                 )
-import qualified XMonad.StackSet                as W
-import           XMonad.Util.EZConfig           ( additionalKeys
-                                                , additionalKeysP
-                                                , removeKeysP
+import           XMonad.Layout.ComboP           ( CombineTwoP
+                                                , Property(..)
+                                                , SwapWindow(..)
+                                                , combineTwoP
                                                 )
 import           XMonad.Layout.Decoration       ( Decoration
                                                 , DefaultShrinker
                                                 )
 import           XMonad.Layout.LayoutModifier   ( ModifiedLayout )
 import           XMonad.Layout.Simplest         ( Simplest )
-import           XMonad.Layout.ComboP           ( CombineTwoP
-                                                , SwapWindow(..)
-                                                , Property(..)
-                                                , combineTwoP
+import           XMonad.Layout.Tabbed           ( TabbedDecoration
+                                                , Theme(..)
+                                                , shrinkText
+                                                , tabbed
                                                 )
 import           XMonad.Layout.TwoPane          ( TwoPane(..) )
-import           XMonad.Layout.Tabbed            --( TabbedDecoration
-                                                 --, simpleTabbed
-                                                 --, simpleTabbedBottom
-                                                 --)
-import           XMonad.Util.Run                ( safeSpawn
+import qualified XMonad.StackSet               as W
+import           XMonad.Util.EZConfig           ( additionalKeys
+                                                , additionalKeysP
+                                                , removeKeysP
+                                                )
+import           XMonad.Util.Run                ( runProcessWithInput
+                                                , safeSpawn
                                                 , spawnPipe
-                                                , runProcessWithInput
                                                 )
 {- }}} -}
+-- brittany-disable-next-binding
 main :: IO ()
 main = xmonad =<< xmobar' (ewmh myConfig)
   where
@@ -132,20 +135,21 @@ main = xmonad =<< xmobar' (ewmh myConfig)
 -- xmobar
 -------------------------------------------------------------------------------
 
-xmobar' :: LayoutClass l Window
-        => XConfig l -> IO (XConfig (ModifiedLayout AvoidStruts l))
+xmobar'
+  :: LayoutClass l Window
+  => XConfig l
+  -> IO (XConfig (ModifiedLayout AvoidStruts l))
 xmobar' conf = do
-    h <- spawnPipe "$HOME/.xmonad/xmobar-x86_64-linux"
-    pure $ docks $ conf
-        { layoutHook = avoidStruts (layoutHook conf)
-        , logHook = logHook conf
-                 <> dynamicLogWithPP xmobarPP
-                      { ppOutput = hPPOutput h
-                      , ppLayout = ppLayout
-                      }
-        }
+  h <- spawnPipe "$HOME/.xmonad/xmobar-x86_64-linux"
+  pure $ docks $ conf
+    { layoutHook = avoidStruts (layoutHook conf)
+    , logHook = logHook conf <> dynamicLogWithPP xmobarPP
+                  { ppOutput = hPPOutput h
+                  , ppLayout = ppLayout
+                  }
+    }
   where
-    hPPOutput h = hPutBuilder h . (<>"\n") . fromString
+    hPPOutput h = hPutBuilder h . (<> "\n") . fromString
     ppLayout s = case parseLayoutType s of
       LayoutFull -> "Full"
       LayoutTabbed -> "Tabbed"
@@ -156,14 +160,13 @@ xmobar' conf = do
 -------------------------------------------------------------------------------
 
 type (:$) = ModifiedLayout
-type (:||) = Choose
+type (:|) = Choose
 infixr 6 :$
-infixr 5 :||
+infixr 5 :|
 type SimpleTab = Decoration TabbedDecoration DefaultShrinker :$ Simplest
 
-type MyLayoutHook = SimpleTab
-                :|| CombineTwoP (TwoPane ()) SimpleTab SimpleTab
-                :|| Full
+type MyLayoutHook
+  = SimpleTab :| CombineTwoP (TwoPane ()) SimpleTab SimpleTab :| Full
 
 data LayoutType
   = LayoutFull
@@ -172,23 +175,24 @@ data LayoutType
   deriving (Eq,Ord,Show)
 
 myLayoutHook :: MyLayoutHook Window
-myLayoutHook = myTabbed
-           ||| combineTwoP (TwoPane (1/50) (1/2))
-                  myTabbed myTabbed (Const True)
-           ||| Full
+myLayoutHook =
+  myTabbed
+    ||| combineTwoP (TwoPane (1 / 50) (1 / 2)) myTabbed myTabbed (Const True)
+    ||| Full
   where
-    myTabbed = tabbed shrinkText def
-        { activeColor         = "#1A1E1B"
-        , activeTextColor     = "#00FF00"
-        , activeBorderColor   = "#000000"
-        , inactiveColor       = "#1A1E1B"
-        , inactiveTextColor   = "#676767"
-        , inactiveBorderColor = "#000000"
-        , activeBorderWidth   = 1
-        , inactiveBorderWidth = 1
-        , fontName            = "xft:Rounded Mgen+ 1mn:size=8"
-        , decoHeight          = 30
-        }
+    myTabbed = tabbed
+      shrinkText
+      def { activeColor = "#1A1E1B"
+          , activeTextColor = "#00FF00"
+          , activeBorderColor = "#000000"
+          , inactiveColor = "#1A1E1B"
+          , inactiveTextColor = "#676767"
+          , inactiveBorderColor = "#000000"
+          , activeBorderWidth = 1
+          , inactiveBorderWidth = 1
+          , fontName = "xft:Rounded Mgen+ 1mn:size=8"
+          , decoHeight = 30
+          }
 
 hoge :: X ()
 hoge = do
@@ -209,37 +213,34 @@ shiftNextScreen = withNextScreen W.shift
 
 swapScreen :: X ()
 swapScreen = windows $ \stack -> case W.visible stack of
-    [] -> stack
-    x : rest -> stack { W.current = y { W.workspace = W.workspace x }
-                      , W.visible = x { W.workspace = W.workspace y } : rest
-                      }
-                  where y = W.current stack
+  [] -> stack
+  x : rest -> stack { W.current = y { W.workspace = W.workspace x }
+                    , W.visible = x { W.workspace = W.workspace y } : rest
+                    }
+    where y = W.current stack
 
 toggleTouchPad :: X ()
 toggleTouchPad = setTouchPad . not =<< isTouchPadEnabled
   where
     setTouchPad :: Bool -> X ()
-    setTouchPad b =
-        safeSpawn "gsettings"
-          [ "set"
-          , "org.gnome.desktop.peripherals.touchpad"
-          , "send-events"
-          , if b then "enabled" else "disabled"
-          ]
+    setTouchPad b = safeSpawn
+      "gsettings"
+      [ "set"
+      , "org.gnome.desktop.peripherals.touchpad"
+      , "send-events"
+      , if b then "enabled" else "disabled"
+      ]
     isTouchPadEnabled :: X Bool
     isTouchPadEnabled = do
-        out <- runProcessWithInput "gsettings"
-                  ["get"
-                  , "org.gnome.desktop.peripherals.touchpad"
-                  , "send-events"
-                  ]
-                  ""
-        case out of
-          "'enabled'\n"  -> pure True
-          "'disabled'\n" -> pure False
-          _ -> error' $ "toggleTouchPad: unknown input: " <> show out
-      where
-        error' s = log' s >> error s
+      out <- runProcessWithInput
+        "gsettings"
+        ["get", "org.gnome.desktop.peripherals.touchpad", "send-events"]
+        ""
+      case out of
+        "'enabled'\n" -> pure True
+        "'disabled'\n" -> pure False
+        _ -> error' $ "toggleTouchPad: unknown input: " <> show out
+      where error' s = log' s >> error s
   -- touchpad=$(gsettings list-schemas | grep touchpad)
   -- gsettings list-keys $touchpad
   -- gsettings range $touchpad some-key
@@ -278,76 +279,75 @@ getCurrentLayoutType :: X LayoutType
 getCurrentLayoutType = parseLayoutType <$> getCurrentLayoutName
 
 getCurrentLayoutName :: X String
-getCurrentLayoutName = dynamicLogString def { ppOrder = \ ~[_,l,_] -> [l] }
+getCurrentLayoutName = dynamicLogString def { ppOrder = \ ~[_, l, _] -> [l] }
 
 parseLayoutType :: String -> LayoutType
-parseLayoutType s
-     | "combining" `List.isPrefixOf` s =  LayoutTwoPaneTabbed
-     | "Tabbed" `List.isPrefixOf` s    =  LayoutTabbed
-     | otherwise                       =  LayoutFull
+parseLayoutType s | "combining" `List.isPrefixOf` s = LayoutTwoPaneTabbed
+                  | "Tabbed" `List.isPrefixOf` s = LayoutTabbed
+                  | otherwise = LayoutFull
 
 setLayoutType :: LayoutType -> X ()
 setLayoutType t = do
   t' <- getCurrentLayoutType
-  unless (t == t' ) $ do
+  unless (t == t') $ do
     sendMessage NextLayout
     setLayoutType t
 
 withNextScreen :: (WorkspaceId -> WindowSet -> WindowSet) -> X ()
 withNextScreen func = gets (W.visible . windowset) >>= \case
-    [] -> pure ()
-    next : _ -> windows $ func $ W.tag $ W.workspace next
+  [] -> pure ()
+  next : _ -> windows $ func $ W.tag $ W.workspace next
 
 -- XXX ad hoc
 focusAnotherPane :: X ()
 focusAnotherPane = getPanesInfo >>= \case
-    Just (all', _focusedPane, unfocusedPane) -> do
-      let mVisibleOnUnfocusedPane = -- 多分あってる
-            List.find (`elem` unfocusedPane) all'
-      case mVisibleOnUnfocusedPane of
-        Nothing -> log' "UnfocusedPane is empty"
-        Just v ->  focus v
-    Nothing -> pure ()
+  Just (all', _focusedPane, unfocusedPane) -> do
+    let mVisibleOnUnfocusedPane = -- 多分あってる
+          List.find (`elem` unfocusedPane) all'
+    case mVisibleOnUnfocusedPane of
+      Nothing -> log' "UnfocusedPane is empty"
+      Just v -> focus v
+  Nothing -> pure ()
 
 focusUpInPane :: X ()
 focusUpInPane = getPanesInfo >>= \case
-    Just (_all', focusedPane, _unfocusedPane) -> do
-      getFocusedWin >>= \case
-        Just focused -> do
-          let x = reverse focusedPane
-          focus $ dropWhile (/=focused) (x++x) !! 1
-        Nothing -> pure ()
-    Nothing -> pure ()
+  Just (_all', focusedPane, _unfocusedPane) -> do
+    getFocusedWin >>= \case
+      Just focused -> do
+        let x = reverse focusedPane
+        focus $ dropWhile (/= focused) (x ++ x) !! 1
+      Nothing -> pure ()
+  Nothing -> pure ()
 
 focusDownInPane :: X ()
 focusDownInPane = getPanesInfo >>= \case
-    Just (_all', focusedPane, _unfocusedPane) -> do
-      getFocusedWin >>= \case
-        Just focused -> do
-          let x = reverse focusedPane
-          focus $ dropWhile (/=focused) (x++x) !! 1
-        Nothing -> pure ()
-    Nothing -> pure ()
+  Just (_all', focusedPane, _unfocusedPane) -> do
+    getFocusedWin >>= \case
+      Just focused -> do
+        let x = reverse focusedPane
+        focus $ dropWhile (/= focused) (x ++ x) !! 1
+      Nothing -> pure ()
+  Nothing -> pure ()
 
 -- XXX ad hoc
 -- returns (All Windows, Forcused Pane, UnfocusedPane)
 getPanesInfo :: X (Maybe ([Window], [Window], [Window]))
 getPanesInfo = getFocusedWin >>= \case
-    Nothing -> pure Nothing
-    Just focused -> do
-      layout <- gets $ windowset >>> W.current >>> W.workspace >>> W.layout
-      case List.splitOn "C2P " (show layout) of
-        _:s0:_
-          | [(all',s1)] <- reads @[Word64] s0
-          , [(left',s2)] <- reads @[Word64] s1
-          , [(right',_s)] <- reads @[Word64] s2
-          , let (focusedPane, unfocusedPane)
-                  | focused `elem` left' = (left', right')
-                  | otherwise            = (right', left')
-          -> pure $ Just (all', focusedPane, unfocusedPane)
-        _ -> pure Nothing
+  Nothing -> pure Nothing
+  Just focused -> do
+    layout <- gets $ windowset >>> W.current >>> W.workspace >>> W.layout
+    case List.splitOn "C2P " (show layout) of
+      _ : s0 : _
+        | [(all', s1)] <- reads @[Word64] s0
+        , [(left', s2)] <- reads @[Word64] s1
+        , [(right', _s)] <- reads @[Word64] s2
+        , let (focusedPane, unfocusedPane)
+                | focused `elem` left' = (left', right')
+                | otherwise = (right', left')
+        -> pure $ Just (all', focusedPane, unfocusedPane)
+      _ -> pure Nothing
 
 getFocusedWin :: X (Maybe Window)
-getFocusedWin = gets $
-  windowset >>> W.current >>> W.workspace >>> W.stack >>> fmap W.focus
+getFocusedWin =
+  gets $ windowset >>> W.current >>> W.workspace >>> W.stack >>> fmap W.focus
 
