@@ -12,7 +12,8 @@ executable xmonad-x86_64-linux
                      , process
                      , containers
                      , xmonad
-                     , xmonad-contrib
+                     , xmonad-contrib == 0.16
+                     , unix
                      , X11
                      , GenericPretty
                      , split
